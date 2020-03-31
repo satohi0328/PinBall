@@ -9,8 +9,11 @@ public class FripperController : MonoBehaviour {
     private float defaultAngle = 20;
     //弾いた時の傾き
     private float flickAngle = -20;
-    //タップした時の指ID
-    private int _fingerId = -1;
+
+    // 最大タップ数
+    private int maxTapCount = 5;
+    //指IDごとに初回タップ時に左右のどちらを押したか保持
+    private string[] arrayFstTapSide = new string[5];
 
     // Use this for initialization
     void Start() {
@@ -23,7 +26,6 @@ public class FripperController : MonoBehaviour {
 
     // Update is called once per frame
     void Update() {
-
         // 矢印キーが押された時の挙動メソッド呼び出し
         EnterCursolKey();
 
@@ -31,9 +33,13 @@ public class FripperController : MonoBehaviour {
         if (Input.touchCount > 0) {
             // タップされている指分だけループ
             for (int i = 0; i < Input.touchCount; i++) {
-                Debug.Log(i);
-                // タップされた時の挙動メソッドを呼び出し
-                TapScreen(Input.GetTouch(i));
+                // タップされた指が最大タップ数以下の場合
+                if (i < maxTapCount) {
+                    // タップされた時の挙動メソッドを呼び出し
+                    TapScreen(Input.GetTouch(i));
+                } else {
+                    // タップされた指が最大タップ数を超えた場合は処理しない
+                }
             }
         }
     }
@@ -48,7 +54,6 @@ public class FripperController : MonoBehaviour {
         if (Input.GetKeyDown(KeyCode.RightArrow) && tag == "RightFripperTag") {
             SetAngle(this.flickAngle);
         }
-
         //矢印キー離された時フリッパーを元に戻す
         if (Input.GetKeyUp(KeyCode.LeftArrow) && tag == "LeftFripperTag") {
             SetAngle(this.defaultAngle);
@@ -61,24 +66,37 @@ public class FripperController : MonoBehaviour {
 
     /** タップされた時の挙動メソッド*/
     private void TapScreen(Touch touch) {
-        // 画面右側がタップされた場合
-        if (Input.mousePosition.x >= Screen.width / 2 && tag == "RightFripperTag") {
+        // 画面右側がタップされている場合
+        if (touch.position.x >= Screen.width / 2 && tag == "RightFripperTag") {
             // タップされた場合
             if (touch.phase == TouchPhase.Began) {
                 // フリッパーを弾く角度に動かす
                 SetAngle(this.flickAngle);
-            }
-            // タップされたポイントが離された場合
-            if (touch.phase == TouchPhase.Ended) {
-                // フリッパーをデフォルトの角度に戻す
-                SetAngle(this.defaultAngle);
-            }
-        }
-        //画面左がタップされた場合
-        if (Input.mousePosition.x < Screen.width / 2 && tag == "LeftFripperTag") {
 
+                // タップ保持用配列[fingerID]に右で押されたことを保持
+                arrayFstTapSide[touch.fingerId] = "Right";
+            }
+            // タップされたポイントが離された場合
+            if (touch.phase == TouchPhase.Ended) {
+                // フリッパーをデフォルトの角度に戻す
+                SetAngle(this.defaultAngle);
+            }
+        }
+        // 右側をタップした指が左側に移動した場合
+        if (touch.position.x < Screen.width / 2 && tag == "RightFripperTag" && arrayFstTapSide[touch.fingerId] == "Right") {
+            // タップ保持用配列[fingerID]を初期化
+            arrayFstTapSide[touch.fingerId] = "";
+            // フリッパーをデフォルトの角度に戻す
+            SetAngle(this.defaultAngle);
+        }
+
+
+        //画面左がタップされている場合
+        if (touch.position.x < Screen.width / 2 && tag == "LeftFripperTag") {
             // タップされた場合
             if (touch.phase == TouchPhase.Began) {
+                // タップ保持用配列[fingerID]に右で押されたことを保持
+                arrayFstTapSide[touch.fingerId] = "Left";
                 // フリッパーを弾く角度に動かす
                 SetAngle(this.flickAngle);
             }
@@ -88,6 +106,15 @@ public class FripperController : MonoBehaviour {
                 SetAngle(this.defaultAngle);
             }
         }
+        // 左側をタップした指が右側に移動した場合
+        if (touch.position.x >= Screen.width / 2 && tag == "LeftFripperTag" && arrayFstTapSide[touch.fingerId] == "Left") {
+            // タップ保持用配列[fingerID]を初期化
+            arrayFstTapSide[touch.fingerId] = "";
+            // フリッパーをデフォルトの角度に戻す
+            SetAngle(this.defaultAngle);
+        }
+
+
     }
 
     //フリッパーの傾きを設定
@@ -101,6 +128,4 @@ public class FripperController : MonoBehaviour {
         }
         this.myHingeJoint.spring = jointSpr;
     }
-
-
 }
